@@ -14,7 +14,10 @@ $db->exec($sql);
 
 // Inserir usuário de teste
 $sql2 = "INSERT OR IGNORE INTO usuarios (email, senha, nome) 
-         VALUES ('teste@teste.com', '123456', 'Usuário Teste')";
+         VALUES ('victor.mdvconsorcios@gmail.com', 'Duda2509#', 'Victor'),
+            ('stephanydefreitas@mdvconsorcios.com.br', '123456', 'Stephany de Freitas'),
+            ('vivianepontes@mdvconsorcios.com.br', '123456', 'Viviane Pontes'),
+            ('victorsouza@mdvconsorcios.com.br', '123456', 'Victor Souza');";
 $db->exec($sql2);
 
 echo "Tabela criada e usuário inserido!";

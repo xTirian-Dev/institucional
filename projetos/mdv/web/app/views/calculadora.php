@@ -6,6 +6,7 @@ if (!isset($_SESSION['usuario'])) {
     header("Location: login.php");
     exit();
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -69,8 +70,17 @@ if (!isset($_SESSION['usuario'])) {
 <body>
     <!-- Botão de logout -->
     <button onclick="window.location.href='?url=login/logout'">Sair</button>
+    <h2> Usuário logado:
+        <?php
+            echo $_SESSION['usuario']['nome'] ?? 'Não encontrado';
+        ?>
+    </h2>
+    
     
     <form id="calculadoraForm">
+        <label for="contrato">Número do Contrato:</label>
+        <input type="text" id="contrato" name="contrato" required placeholder="Ex: 123456">
+
         <label for="credito">Crédito (valor do bem):</label>
         <input type="text" id="credito" name="credito" required placeholder="Ex: 100.000,00">
 
@@ -83,10 +93,16 @@ if (!isset($_SESSION['usuario'])) {
         <input type="submit" value="Calcular">
     </form>
 
+
     <p id="resultado" class="resultado"></p>
     <p id="erro" class="error"></p>
 
+    <!-- Botão de PDF (inicialmente escondido) -->
+    <button id="btnPdf" style="display:none;">Gerar PDF</button>
+
 <script>
+    const btnPdf = document.getElementById('btnPdf');
+
     // Máscara para o campo de crédito (formato R$)
     document.getElementById('credito').addEventListener('input', function(e) {
         let value = e.target.value.replace(/\D/g, "");
@@ -110,6 +126,7 @@ if (!isset($_SESSION['usuario'])) {
     document.getElementById('calculadoraForm').addEventListener('submit', function(e) {
         e.preventDefault();
 
+        var contrato = document.getElementById('contrato').value;
         var credito = document.getElementById('credito').value;
         var percentualPago = document.getElementById('percentualPago').value;
         var encerramentoGrupo = document.getElementById('encerramentoGrupo').value;
@@ -125,12 +142,20 @@ if (!isset($_SESSION['usuario'])) {
             const mensagemWhatsApp = encodeURIComponent(`Olá, gostaria de falar sobre minha proposta de R$ ${valorFormatado}`);
 
             document.getElementById('erro').textContent = "";
-            document.getElementById('resultado').innerHTML = "Valor da Proposta: <strong>R$ " + valorFormatado + "</strong><br>" +
-                `<a href='https://web.whatsapp.com/send?phone=5511934352133&text=${mensagemWhatsApp}' target='_blank'>Falar com consultor</a>`;
+            document.getElementById('resultado').innerHTML = "Valor da Proposta: <strong>R$ " + valorFormatado + "</strong><br>" + "Este valor já está com - 40%"
+                            
+            //`<a href='https://web.whatsapp.com/send?phone=5511934352133&text=${mensagemWhatsApp}' target='_blank'>Falar com consultor</a>`;
+
+            // AQUI: mostrar o botão PDF
+             btnPdf.style.display = "block";
+            
+            
 
         } catch (error) {
             document.getElementById('erro').innerHTML = error.message + ', <a href="https://web.whatsapp.com/send?phone=5511934352133&text=" target="_blank">converse com um consultor</a>.';
             document.getElementById('resultado').textContent = "";
+            // Se deu erro, esconde o botão PDF
+             btnPdf.style.display = "none";
         }
     });
 
@@ -201,8 +226,37 @@ if (!isset($_SESSION['usuario'])) {
             throw new Error("Proposta abaixo do mínimo permitido (R$ 3.000,00)");
         }
 
-        return resultadoCalculo;
+        return resultadoCalculo*0.6;
     }
+
+    btnPdf.addEventListener("click", function() {
+        const resultadoElemento = document.getElementById("resultado");
+        // extrai apenas o valor numérico
+        const valorTexto = resultadoElemento.textContent || resultadoElemento.innerText;
+        const valorApenas = valorTexto.match(/[\d.,]+/)[0]; // pega "3.600,00"
+
+        const formData = new FormData();
+        formData.append("contrato", document.getElementById("contrato").value);
+        formData.append("credito", document.getElementById("credito").value);
+        formData.append("percentualPago", document.getElementById("percentualPago").value);
+        formData.append("encerramentoGrupo", document.getElementById("encerramentoGrupo").value);
+        formData.append("resultado", valorApenas); // somente o número
+        formData.append("usuario", "<?= $_SESSION['usuario_nome'] ?? 'Usuário'; ?>");
+
+        fetch("?url=calculadora/gerarPdf", {
+            method: "POST",
+            body: formData
+        })
+        .then(res => res.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            window.open(url, "_blank");
+        })
+        .catch(err => alert("Erro ao gerar PDF: " + err));
+    });
+
+
+
 </script>
 </body>
 </html>

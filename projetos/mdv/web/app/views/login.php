@@ -12,7 +12,7 @@
 </style>
 </head>
 <body>
-<h2>Login</h2>
+<h2>Logo</h2>
 <?php
 session_start();
 if (isset($_SESSION['erro'])) {

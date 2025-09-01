@@ -82,15 +82,15 @@ if (!isset($_SESSION['usuario'])) {
         <input type="text" id="contrato" name="contrato" required placeholder="Ex: 123456">
 
         <label for="credito">Crédito (valor do bem):</label>
-        <input type="text" id="credito" name="credito" required placeholder="Ex: 100.000,00">
+        <input type="text" id="credito" name="credito" required placeholder="Ex: 100.000,00" disabled>
 
         <label for="percentualPago">Percentual Pago (%):</label>
-        <input type="text" id="percentualPago" name="percentualPago" required placeholder="Ex: 50">
+        <input type="text" id="percentualPago" name="percentualPago" required placeholder="Ex: 50" disabled>
 
         <label for="encerramentoGrupo">Encerramento do Grupo (Data):</label>
-        <input type="date" id="encerramentoGrupo" name="encerramentoGrupo" required>
+        <input type="date" id="encerramentoGrupo" name="encerramentoGrupo" required disabled>
 
-        <input type="submit" value="Calcular">
+        <input type="submit" value="Calcular" disabled>
     </form>
 
 
@@ -102,6 +102,47 @@ if (!isset($_SESSION['usuario'])) {
 
 <script>
     const btnPdf = document.getElementById('btnPdf');
+
+    document.getElementById('contrato').addEventListener('focusout', function(e) {
+        const contrato = e.target.value.trim();
+        if (!contrato) return;
+
+        const formData = new FormData();
+        formData.append("contrato", contrato);
+
+        fetch("?url=calculadora/consultarContrato", {
+            method: "POST",
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.existe) {
+                // ✅ Já existe proposta → preencher e bloquear
+                document.getElementById("credito").value = data.proposta.credito;
+                document.getElementById("percentualPago").value = data.proposta.percentual;
+                document.getElementById("encerramentoGrupo").value = data.proposta.encerramento;
+                document.getElementById("resultado").innerText = "Proposta já existente: R$ " + data.proposta.resultado;
+
+                // bloquear edição
+                document.getElementById("credito").disabled = true;
+                document.getElementById("percentualPago").disabled = true;
+                document.getElementById("encerramentoGrupo").disabled = true;
+                document.querySelector("input[type=submit]").disabled = true;
+                btnPdf.style.display = "block"; // já pode gerar PDF
+            } else {
+                // 🚀 Não existe proposta → liberar campos
+                document.getElementById("credito").disabled = false;
+                document.getElementById("percentualPago").disabled = false;
+                document.getElementById("encerramentoGrupo").disabled = false;
+                document.querySelector("input[type=submit]").disabled = false;
+                btnPdf.style.display = "none";
+                document.getElementById("resultado").innerText = "";
+            }
+        })
+        .catch(err => {
+            console.error("Erro na consulta:", err);
+        });
+    });
 
     // Máscara para o campo de crédito (formato R$)
     document.getElementById('credito').addEventListener('input', function(e) {
@@ -142,7 +183,7 @@ if (!isset($_SESSION['usuario'])) {
             const mensagemWhatsApp = encodeURIComponent(`Olá, gostaria de falar sobre minha proposta de R$ ${valorFormatado}`);
 
             document.getElementById('erro').textContent = "";
-            document.getElementById('resultado').innerHTML = "Valor da Proposta: <strong>R$ " + valorFormatado + "</strong><br>" + "Este valor já está com - 40%"
+            document.getElementById('resultado').innerHTML = "Valor da Proposta: <strong>R$ " + valorFormatado + "</strong><br>" + "Mensagem que será enviada"
                             
             //`<a href='https://web.whatsapp.com/send?phone=5511934352133&text=${mensagemWhatsApp}' target='_blank'>Falar com consultor</a>`;
 
@@ -226,7 +267,7 @@ if (!isset($_SESSION['usuario'])) {
             throw new Error("Proposta abaixo do mínimo permitido (R$ 3.000,00)");
         }
 
-        return resultadoCalculo*0.6;
+        return resultadoCalculo*0.5;
     }
 
     btnPdf.addEventListener("click", function() {

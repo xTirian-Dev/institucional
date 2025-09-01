@@ -43,4 +43,46 @@ class CalculadoraController {
         $pdf->Output("D", "proposta-$contrato.pdf"); // força download
     }
 
+    public function consultarContrato() {
+        session_start();
+        if (!isset($_SESSION['usuario'])) {
+            header("HTTP/1.1 401 Unauthorized");
+            echo json_encode(["erro" => "Não autorizado"]);
+            exit;
+        }
+
+        $contrato = $_POST['contrato'] ?? '';
+
+        if (empty($contrato)) {
+            header("Content-Type: application/json");
+            echo json_encode(["erro" => "Contrato não informado"]);
+            exit;
+        }
+
+        require_once __DIR__ . '/../../app/core/Database.php';
+        $db = Database::getConnection();
+
+        $stmt = $db->prepare("SELECT contrato, credito, percentual, encerramento, resultado 
+                            FROM propostas 
+                            WHERE contrato = :contrato 
+                            ORDER BY criado_em DESC LIMIT 1");
+        $stmt->execute([':contrato' => $contrato]);
+        $proposta = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        header("Content-Type: application/json");
+        if ($proposta) {
+            // Já existe proposta → devolve os dados
+            echo json_encode([
+                "existe"     => true,
+                "proposta"   => $proposta
+            ]);
+        } else {
+            // Não existe proposta → libera form
+            echo json_encode([
+                "existe" => false
+            ]);
+        }
+    }
+
+
 }
